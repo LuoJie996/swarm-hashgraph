@@ -4,7 +4,8 @@ There are two case studies in this repository, one is black-white ratio estimati
 ## Requirements
 Ubuntu18.04, Webots2021a
 ## Install
-git clone https://github.com/luoxiaojie9527/swarm-hashgraph.git
+###
+    git clone https://github.com/luoxiaojie9527/swarm-hashgraph.git
 ## Usage
 Take object-searching for example
 1. launch the Hashgrpah process
