@@ -1,0 +1,100 @@
+#VRML_SIM R2021a utf8
+WorldInfo {
+  coordinateSystem "NUE"
+}
+Viewpoint {
+  orientation 0.556985638567963 -0.8022552661214305 -0.2148336249507306 5.386879140229296
+  position 2.4987288349502728 2.1880993996495204 3.0525079617240856
+  followType "None"
+  bloomThreshold 1
+}
+TexturedBackground {
+  texture "empty_office"
+  skyColor [
+    1 1 1
+  ]
+}
+TexturedBackgroundLight {
+  texture "empty_office"
+}
+RectangleArena {
+  floorSize 2 2
+  floorTileSize 2 2
+  floorAppearance Appearance {
+    texture DEF FloorImage ImageTexture {
+      url [
+        "textures/parquetry/0.40.png"
+      ]
+    }
+  }
+  wallAppearance Appearance {
+    material Material {
+      diffuseColor 0 0 0
+      emissiveColor 1 1 1
+      specularColor 1 1 1
+    }
+  }
+}
+DEF EnvSet_supervisor Robot {
+  children [
+    Camera {
+      translation 0 2 0
+      rotation 1 0 0 -1.57
+      children [
+        Transform {
+          rotation 1 0 0 -1.57
+          children [
+            Shape {
+              appearance PBRAppearance {
+                baseColor 0.933333 0.933333 0.92549
+                roughness 1
+                metalness 0
+              }
+              geometry Cylinder {
+                height 0.03
+                radius 0.01
+              }
+            }
+          ]
+        }
+      ]
+      fieldOfView 1
+      width 96
+      height 96
+      antiAliasing TRUE
+    }
+  ]
+  controller "black-white-ratio-estimate-supervisor"
+  supervisor TRUE
+}
+DEF Position_Talker Robot {
+  name "robot(1)"
+  controller ""
+  supervisor TRUE
+}
+DEF Table Shape {
+  appearance Appearance {
+    material Material {
+      diffuseColor 0 0 0
+      emissiveColor 0.2 0.2 0.2
+    }
+  }
+  geometry IndexedFaceSet {
+    coord Coordinate {
+      point [
+        1.01 -0.01 -1.01
+        -1.01 -0.01 -1.01
+        -1.01 -0.01 1.01
+        1.01 -0.01 1.01
+        0.8 -1 -0.8
+        -0.8 -1 -0.8
+        -0.8 -1 0.8
+        0.8 -1 0.8
+      ]
+    }
+    coordIndex [
+      3, 7, 4, 0, -1, 2, 6, 7, 3, -1, 1, 5, 6, 2, -1, 0, 4, 5, 1, -1, 7, 6, 5, 4, -1, 3, 0, 1, 2
+    ]
+  }
+  isPickable FALSE
+}
