@@ -20,16 +20,16 @@ import math
 import traceback
 import logging
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-uuid_str = strftime("%Y-%m-%d-%H_%M_%S", localtime())
-tmp_file_name = './log/Info_%s_log.txt' % uuid_str
-handler_info = logging.FileHandler(tmp_file_name)
-handler_info.setLevel(logging.INFO)
-formatter = logging.Formatter('%(message)s')
-handler_info.setFormatter(formatter)
-logger.addHandler(handler_info)
-logger.info("%s\t%s\t%s\t%s" % ("time","lenth_transactions_confirmed","lenth_hg","ev_count"))
+# logger = logging.getLogger(__name__)
+# logger.setLevel(logging.INFO)
+# uuid_str = strftime("%Y-%m-%d-%H_%M_%S", localtime())
+# tmp_file_name = './log/Info_%s_log.txt' % uuid_str
+# handler_info = logging.FileHandler(tmp_file_name)
+# handler_info.setLevel(logging.INFO)
+# formatter = logging.Formatter('%(message)s')
+# handler_info.setFormatter(formatter)
+# logger.addHandler(handler_info)
+# logger.info("%s\t%s\t%s\t%s" % ("time","lenth_transactions_confirmed","lenth_hg","ev_count"))
 C = 6
 N=20
 groups = {0:[],1:[],2:[],3:[]}
@@ -368,8 +368,8 @@ class Node:
         lenth_hg = len(self.hg)
         print(len(self.hg))
         self.time = time() - start
-        if self.id == 9:
-            logger.info("%.6f\t%d\t%d\t%d" % (self.time,lenth_transactions_confirmed,lenth_hg,ev_count))
+        # if self.id == 9:
+        #     logger.info("%.6f\t%d\t%d\t%d" % (self.time,lenth_transactions_confirmed,lenth_hg,ev_count))
 
 
     def smart_contract(self,robot_id,x):
