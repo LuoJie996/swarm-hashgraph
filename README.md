@@ -3,6 +3,8 @@ This repository is an implementation of the framework for hashgraph-based swarm 
 There are two case studies in this repository, one is black-white ratio estimation and the other is object searching
 ## Requirements
 Ubuntu18.04, Webots 2021a
+
+Requirements of py-swirld installation refers to https://github.com/Lapin0t/py-swirld
 ## Install
 ###
     git clone https://github.com/luoxiaojie9527/swarm-hashgraph.git
