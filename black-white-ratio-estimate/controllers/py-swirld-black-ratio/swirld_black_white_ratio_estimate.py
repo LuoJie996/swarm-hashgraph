@@ -20,19 +20,19 @@ import math
 import traceback
 import logging
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-uuid_str = strftime("%Y-%m-%d-%H_%M_%S", localtime())
-tmp_file_name = './log/Info_%s_log.txt' % uuid_str
-handler_info = logging.FileHandler(tmp_file_name)
-handler_info.setLevel(logging.INFO)
-formatter = logging.Formatter('%(message)s')
-handler_info.setFormatter(formatter)
-logger.addHandler(handler_info)
-logger.info("%s\t%s\t%s\t%s" % ("time","lenth_transactions_confirmed","lenth_hg","ev_count"))
+# logger = logging.getLogger(__name__)
+# logger.setLevel(logging.INFO)
+# uuid_str = strftime("%Y-%m-%d-%H_%M_%S", localtime())
+# tmp_file_name = './log/Info_%s_log.txt' % uuid_str
+# handler_info = logging.FileHandler(tmp_file_name)
+# handler_info.setLevel(logging.INFO)
+# formatter = logging.Formatter('%(message)s')
+# handler_info.setFormatter(formatter)
+# logger.addHandler(handler_info)
+# logger.info("%s\t%s\t%s\t%s" % ("time","lenth_transactions_confirmed","lenth_hg","ev_count"))
 
 C = 6
-N=20
+N = 20
 
 hostname = '127.0.0.1'
 port = 9955
@@ -109,9 +109,9 @@ class Node:
         self.mean = 0
         self.threshold = 0.014
         self.m2 = 0
-        self.se=[1]*4
-        self.allconsensusReached = False
-        self.consensusReached = False
+        self.se= 10
+        #self.allconsensusReached = False
+        #self.consensusReached = False
         self.x = {i:[] for i in range(n_nodes)}
         self.y = []
         self.stop = False
@@ -369,8 +369,8 @@ class Node:
         lenth_hg = len(self.hg)
         # print(len(self.hg))
         self.time = time() - start
-        if self.id == 9:
-            logger.info("%.6f\t%d\t%d\t%d" % (self.time,lenth_transactions_confirmed,lenth_hg,ev_count))
+        # if self.id == 9:
+        #     logger.info("%.6f\t%d\t%d\t%d" % (self.time,lenth_transactions_confirmed,lenth_hg,ev_count))
 
     def smart_contract(self,x):
         if x and x!=-2:
@@ -381,24 +381,20 @@ class Node:
             self.mean = self.mean + delta / self.count
             delta2 = x - self.mean
             self.m2 = self.m2 + delta *delta2
-            if self.count < 2:
-                self.consensusReached = False
-            else:
+            if self.count > 2:
                 sd = math.sqrt(self.m2 / (self.count - 1))
                 std=np.std(self.y,ddof=1)
                 se2=std / math.sqrt(self.count)
                 self.se = sd / math.sqrt(self.count)
-                print("robot %2d, sd=%f, std=%f, se=%f, se2=%f, mean=%f, consensus=%s " % (self.id, sd, std, self.se, se2, self.mean, str(self.consensusReached)))
-                if self.se < self.threshold and self.count > 2:
-                    self.consensusReached = True
-                    print("robot %2d allconfirmedvotes: %s" % (self.id, str(self.y)))
-                else:
-                    self.consensusReached = False
+                print("robot %2d, sd=%f, std=%f, se=%f, se2=%f, mean=%f, consensus=%s " % (self.id, sd, std, self.se, se2, self.mean, self.se < self.threshold))
+            if self.se < self.threshold:
+                print("robot %2d allconfirmedvotes: %s" % (self.id, str(self.y)))
+
         elif x == -2:
             self.stop = True
-            self.allconsensusReached = True
+            #self.allconsensusReached = True
         else:
-            print("unknown data: %s" % str(x))
+            print("robot %2d got unknown data: %s" % (self.id, str(x)))
 
     def main(self):
         """Main working loop."""
@@ -408,10 +404,11 @@ class Node:
         while True:
             yield new
             payload = agent.getData()
+            print("robot=%2d, se=%f, mean=%f, consensusRound=%s, consensusReached=%s, hg_height=%d" % (self.id, self.se, self.mean, str(self.consensus), str(self.se < self.threshold), len(self.hg)))
             if payload:
 
                 neighbor_pks = [list(self.network.keys())[i] for i in range(self.n) if payload[0][i] == 1]
-                other_pks = list(set(self.network.keys())-set(self.pk))
+                other_pks = list(set(self.network.keys())-{self.pk})
                 c = other_pks[randrange(self.n - 1)]
                 # if neighbor_pks:  #local mode
                 if c in neighbor_pks and neighbor_pks:  #global mode
@@ -435,13 +432,13 @@ class Node:
                 else: # 没有邻居时
                     self.pre_payload.append(payload[1:])
 
-            if self.stopsend == False and self.consensusReached == True:
+            if not self.stopsend and self.se < self.threshold:
                 hg_size = get_size(self.hg)
                 hg_height = len(self.hg)
                 #f2 = open("/home/luo/hashgraph.txt", "w")
                 #f2.write(str(self.hg))
                 #f2.close()
-                respond = "#"+str((self.consensusReached, self.mean, self.time, hg_size, hg_height))+"~"
+                respond = "#"+str((self.se < self.threshold, self.mean, self.se, self.se < self.threshold, self.time, hg_size, hg_height))+"~"
                 print("robot %2d response: %s" % (self.id, respond))
                 agent.sendData(respond.encode())
                 self.stopsend = True
@@ -497,22 +494,22 @@ class Agent:
         try:
             data = self.connect_socket.recv(192).decode()
             print("robot %2d vote: %s lenth=%d" % (self.id, data, len(data)))
-            if len(data) < 96:
-                data = ''
-            else:
+            if len(data) > 0:
                 data = data.split('#')[1]
-                if len(data) < 95:
-                    data =''
+                if data[-1] !='~':
+                    data = ''
                 else:
                     data = eval(data.strip('~'))
                     if data[3] == self.last_data:
-                        data[2] = ''
+                        if data[2] != -2:
+                            #deduplicate
+                    	    data[2] = ''
                     else:
                         self.last_data = data[3]
-                        if data[2] == -1:
-                            data[2] = ''
                         self.votes.append(data[2])
-            print("robot %2d votes=%s" % (self.id, str(self.votes)))
+                # print("robot %2d votes=%s" % (self.id, str(self.votes)))
+            else: 
+                data = ''
         except Exception as e:
             data = ''
             traceback.print_exc()
@@ -556,7 +553,7 @@ def test(n_nodes, n_turns):
 start = time()
 ev_count = 0
 try:
-    nodes=test(20,100000)
+    nodes=test(N,100000)
 except Exception as e:
     traceback.print_exc()
 end = time()

@@ -527,7 +527,7 @@ while robot.step(timestep) != -1:
     
     end_time=robot.getTime()
     total_time=end_time - start_time
-    if(total_time > 2000):
+    if(total_time > 3000):
         print("Exceeded max time")
         f = open("/home/luo/all_result.txt", "a+")
         f.write('Exit Time: ' + str(total_time) + '\n')

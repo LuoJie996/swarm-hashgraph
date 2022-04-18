@@ -570,8 +570,8 @@ if __name__ == '__main__':
     except Exception as e:
         print("connection failed")
         print(e) 
-        # supverisornode = robot.getFromDef("epuck%s"%robot_id)
-        # supverisornode.restartController()  
+        supverisornode = robot.getFromDef("epuck%s"%robot_id)
+        supverisornode.restartController()  
     else:
         print("connection success")     
     finally:   

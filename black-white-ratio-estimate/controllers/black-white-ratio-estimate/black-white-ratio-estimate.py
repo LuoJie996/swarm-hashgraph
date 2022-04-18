@@ -40,7 +40,7 @@ byzantine_robots = random.sample(list(range(N)), byzantine_number)
 center = [[0.6,0.6],[-0.6,0.6],[-0.6,-0.6],[0.6,-0.6]]
 # X is the amount of ranger_robots in each group
 
-termination_time_ticks = 3000
+termination_time_ticks = 4000
 
 for i in range(group_number):
     if customData in groups[i]:
@@ -345,7 +345,7 @@ def Sync():
 def Sync_stop_signal():
     try:
         msg="#[%s, %2d, %6d, %6d]~" % (str(neighbors),customData,-2,vote_id)
-        # print("sync: "+msg)
+        print("sync: "+msg)
         msg=msg.encode()
         s.send(msg)
     except Exception as e:
@@ -368,13 +368,13 @@ def ConnectAndListen():
             
     diffneighbors = updateNeighbors()
 
-    if voteFlag and not STOPLOOP and termination_time_ticks > 0:
+    if voteFlag and not consensusReached and termination_time_ticks > 0:
         Vote()
         voteFlag = False
-    if remainingsyncTime <0:
+    else:
         # remainingsyncTime = math.ceil(20 / timeFactor)
         remainingsyncTime=-1
-        if termination_time_ticks < 0:
+        if consensusReached:
             Sync_stop_signal()
         else:
             Sync()
@@ -434,7 +434,7 @@ def WaitForDecision(threadName):
                 print("id=%d,C:Response from Server:%s" %(customData,result))
                 resultList=eval(result) #
                 if resultList[0] == True and consensusReached == False:
-                    print("consensusReached is " + str(resultList[0]))
+                    print("consensusReached is %s for robot %2d" % (str(resultList[0]),customData))
                     f = open("/home/luo/all_result.txt", "a+")
                     f.write(str(resultList[1:]))
                     f.write('\n')
