@@ -11,7 +11,7 @@ import logging
 
 robot = Supervisor()
 timestep =640
-N = 20
+N = 6
 group_number = 1
 groups = {0:[],1:[],2:[],3:[]}
 swarm =[]
@@ -25,7 +25,7 @@ print(swarm)
 f = open("/home/luo/commRanger.txt","r")
 X = int(f.readline())
 f.close()         
-X = X
+X = 0
 ranger_robots=list(range(N)[:X])
 print(ranger_robots)
 

@@ -9,15 +9,15 @@ import traceback
 robot = Supervisor()
 timestep =640 #ms
 timeFactor = timestep / 100.0
-customData = int(robot.getCustomData())
+robot_id = int(robot.getCustomData())
 TURN=45 / timeFactor
 LAMDA=100 / timeFactor
-sigma=100 / timeFactor
+sigma=30 / timeFactor
 alpha=1.0
 sensor_num = 8
 ps_sensor_name = ['ps0','ps1','ps2','ps3','ps4','ps5','ps6','ps7']
         
-N = 20
+N = 6
 group_number = 1
 groups = {0:[],1:[],2:[],3:[]}
 
@@ -27,23 +27,23 @@ for i in range(N):
 f = open("/home/luo/commRanger.txt","r")
 X = int(f.readline())
 f.close()         
-X = X
+X = 0
 ranger_robots=list(range(N)[:X])
-print("ranger_robots=%s"%str(ranger_robots))
-byzantine_number = 0
+print("ranger_robots=:%s" % str(ranger_robots))
 f = open("/home/luo/ByzNum.txt","r")
-byzantine_number = int(f.readline())
+B = int(f.readline())
 f.close() 
-byzantine_number = 0
-byzantine_robots = random.sample(list(range(N)), byzantine_number)
-
+B = 2
+byzantine_robots = list(range(N)[:B])
+print("byzantine_robots=:%s" % str(byzantine_robots))
+byzantine_style = '2' #or '1' or '2'
 center = [[0.6,0.6],[-0.6,0.6],[-0.6,-0.6],[0.6,-0.6]]
 # X is the amount of ranger_robots in each group
 
 termination_time_ticks = 4000
 
 for i in range(group_number):
-    if customData in groups[i]:
+    if robot_id in groups[i]:
         group_id = i
 
 
@@ -103,7 +103,7 @@ def doLastAction():
 ##################################  
 def moveBack():
     stop()
-    epuck = robot.getFromDef("epuck"+str(customData))
+    epuck = robot.getFromDef("epuck"+str(robot_id))
     self_pos = epuck.getPosition()
     self_rot = epuck.getField("rotation").getSFRotation()
     delta_x = center[group_id][0] - self_pos[0]
@@ -130,32 +130,32 @@ def ObstacleAvoidance():
     global doMoveBack
     image_array = camera.getImageArray()
     in_river = image_process(image_array,"blue")
-    if customData in ranger_robots:
+    if robot_id in ranger_robots:
         in_river = 0
     ps_sensor_value = []
     for i_ in range(sensor_num):
         ps_sensor_value.append(ps_sensor[i_].getValue())
     dis =100
-    front_obstacle=ps_sensor_value[0]>dis or ps_sensor_value[7]>dis or in_river
-    right_obstacle=ps_sensor_value[0]>dis or ps_sensor_value[1]>dis or ps_sensor_value[2]>dis
-    left_obstacle=ps_sensor_value[6]>dis or ps_sensor_value[7]>dis or ps_sensor_value[5]>dis
+    right_obstacle=ps_sensor_value[2]>dis or ps_sensor_value[1]>dis or ps_sensor_value[0]>dis
+    left_obstacle=ps_sensor_value[5]>dis or ps_sensor_value[6]>dis or ps_sensor_value[7]>dis
+    front_obstacle=right_obstacle and left_obstacle
     back_obstacle=ps_sensor_value[3]>dis or ps_sensor_value[4]>dis 
-    epuck = robot.getFromDef("epuck"+str(customData))
+    epuck = robot.getFromDef("epuck"+str(robot_id))
     self_pos = epuck.getPosition()
     escaped = 0
     arrived = 1
     doRandomMove = 0
 
               
-    if customData in ranger_robots:
+    if robot_id in ranger_robots:
         escaped = 0
         arrived = 1
     
     if escaped:
-        print("id=%2d escaped" % customData)
+        print("id=%2d escaped" % robot_id)
         print(self_pos)
         if not doMoveBack:
-            print("id=%2d doMoveBack" % customData)
+            print("id=%2d doMoveBack" % robot_id)
             moveBack()
             doMoveBack = 1
     if not arrived and doMoveBack:
@@ -291,19 +291,26 @@ def Explore():
     global voteFlag
     
     DetectCell()
-
+        
     if black_count < white_count:
         opinion = 1    
     else:
         opinion = 2
     quality = 1.0 * alpha * black_count / (black_count + white_count)
+    if robot_id in byzantine_robots:
+        if byzantine_style == '0':
+            quality = 0.0
+        elif byzantine_style == '1':
+            quality = 1.0
+        else:
+            quality = random.random()
     vote = format(quality, '.6f')
     if(remainingExplorationTime > 0):
         remainingExplorationTime = remainingExplorationTime - 1
     else:
         voteFlag = True
                 
-        remainingExplorationTime = math.ceil(sigma + 100 / timeFactor)
+        remainingExplorationTime = math.ceil(sigma)
         exploreDurationTime = remainingExplorationTime
         #重置reset
         black_count = 0
@@ -318,12 +325,12 @@ def Vote():
     global vote
     global vote_id
     vote_id = vote_id + 1
-    msg="#[%s, %2d, %s, %6d]~" % (str(neighbors),customData,str(vote).rjust(18,' '),vote_id)
+    msg="#[%s, %2d, %s, %6d]~" % (str(neighbors),robot_id,str(vote).rjust(18,' '),vote_id)
     print("vote: %s lenth=%d" % (msg,len(msg)))
     msg=msg.encode()
     votes.append(vote)
 
-    print("id==%d, n=%d, votes=%s" % (customData,len(votes),str(votes)))
+    print("id==%d, n=%d, votes=%s" % (robot_id,len(votes),str(votes)))
     try:
         s.send(msg)
     except Exception as e:
@@ -332,7 +339,7 @@ def Vote():
         # print(e)
         
 def Sync():
-    msg = "#[%s, %2d, %s, %6d]~" % (str(neighbors),customData,str(vote).rjust(18,' '),vote_id)
+    msg = "#[%s, %2d, %s, %6d]~" % (str(neighbors),robot_id,str(vote).rjust(18,' '),vote_id)
     try:
         # print("sync: "+msg)
         msg=msg.encode()
@@ -344,7 +351,7 @@ def Sync():
         
 def Sync_stop_signal():
     try:
-        msg="#[%s, %2d, %6d, %6d]~" % (str(neighbors),customData,-2,vote_id)
+        msg="#[%s, %2d, %6d, %6d]~" % (str(neighbors),robot_id,-2,vote_id)
         print("sync: "+msg)
         msg=msg.encode()
         s.send(msg)
@@ -397,11 +404,11 @@ def getNeighbors():
             if dist < max(commRanges[i],commRanges[j]):
                 neighbor[j][i]=1
                 neighbor[i][j]=1
-    if neighbor[customData]:
+    if neighbor[robot_id]:
         isConnecting = True
     else:
         isConnecting = False              
-    return neighbor[customData]
+    return neighbor[robot_id]
 
 def updateNeighbors():
     global oldNeighbors
@@ -431,22 +438,22 @@ def WaitForDecision(threadName):
         result = getResult()
         if result != "":
             if "end" != result:
-                print("id=%d,C:Response from Server:%s" %(customData,result))
+                print("id=%d,C:Response from Server:%s" %(robot_id,result))
                 resultList=eval(result) #
                 if resultList[0] == True and consensusReached == False:
-                    print("consensusReached is %s for robot %2d" % (str(resultList[0]),customData))
+                    print("consensusReached is %s for robot %2d" % (str(resultList[0]),robot_id))
                     f = open("/home/luo/all_result.txt", "a+")
                     f.write(str(resultList[1:]))
                     f.write('\n')
                     f.close()
                     f = open("/home/luo/tmp_result.txt", "a+")
-                    f.write('epuck' + str(customData) + '\n')
+                    f.write('epuck' + str(robot_id) + '\n')
                     f.close()
                     consensusReached = True
             else:
-                print("id=%d,C:end..."% customData)
+                print("id=%d,C:end..."% robot_id)
                 f = open("/home/luo/tmp_result.txt", "a+")
-                f.write('epuck' + str(customData) + '\n')
+                f.write('epuck' + str(robot_id) + '\n')
                 f.close()     
                 STOPLOOP = True     
     except Exception as e:
@@ -473,10 +480,10 @@ if __name__ == '__main__':
     f.close() 
     commRanges =[1 if _ in ranger_robots else 0.25 for _ in range(N)] 
     speed_max = 5
-    if customData in ranger_robots: 
+    if robot_id in ranger_robots: 
         speed_max = 7.5
    
-    commRange = commRanges[customData]
+    commRange = commRanges[robot_id]
 
     #global variable
     black_count=0
@@ -490,7 +497,7 @@ if __name__ == '__main__':
     # remainingsyncTime = math.ceil(20 / timeFactor)
     remainingsyncTime=-1
     remainingTime = math.ceil(numpy.random.exponential(LAMDA))
-    remainingExplorationTime = math.ceil(sigma+100/timeFactor)
+    remainingExplorationTime = math.ceil(sigma)
     votes =[]
     STATE = 1
     threadCurrentlyRunning = False 
@@ -530,8 +537,8 @@ if __name__ == '__main__':
     left_motor.setPosition(float('inf'))
     right_motor.setPosition(float('inf'))
     #连接服务端
-    IP = "127.0.0.1"
-    PORT=9955+customData
+    IP = "172.17.0.1"
+    PORT=9955+robot_id
     try:
         socket.setdefaulttimeout(10)
         s = socket.socket()
@@ -540,7 +547,7 @@ if __name__ == '__main__':
     except Exception as e:
         print("connection failed")
         print(e) 
-        supvisornode = robot.getFromDef("epuck%s"%customData)
+        supvisornode = robot.getFromDef("epuck%s"%robot_id)
         supvisornode.restartController()  
     else:
         print("connection success")     

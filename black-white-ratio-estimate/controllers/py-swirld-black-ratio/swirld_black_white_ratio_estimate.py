@@ -19,6 +19,7 @@ import numpy as np
 import math
 import traceback
 import logging
+from byzantineFilter import byzantineFilter
 
 # logger = logging.getLogger(__name__)
 # logger.setLevel(logging.INFO)
@@ -32,9 +33,9 @@ import logging
 # logger.info("%s\t%s\t%s\t%s" % ("time","lenth_transactions_confirmed","lenth_hg","ev_count"))
 
 C = 6
-N = 20
-
-hostname = '127.0.0.1'
+N = 6
+byzantine = True
+hostname = '172.17.0.1'
 port = 9955
 
 def majority(it):
@@ -100,8 +101,7 @@ class Node:
         self.can_see[h] = {ev.c: h}
         self.head = h
 
-        # self-defined 
-        self.data_confirmed = []
+        # self-defined
         self.pre_payload = []
         # self.Data = []
         # estimation
@@ -110,15 +110,13 @@ class Node:
         self.threshold = 0.014
         self.m2 = 0
         self.se= 10
-        #self.allconsensusReached = False
-        #self.consensusReached = False
-        self.x = {i:[] for i in range(n_nodes)}
-        self.y = []
+        self.votes_of_robot = {i:[] for i in range(n_nodes)}
+        self.confirmed_votes = []
+        self.consensusReached = False
         self.stop = False
         self.stopsend = False
         self.time = 0
-        self.byzantine_robot = set()  # the id of byzantine robots
-        self.votesofrobot = []
+        self.byzantine_robot = []  # the id of byzantine robots
     def new_event(self, d, p):
         """Create a new event (and also return it's hash)."""
 
@@ -355,46 +353,64 @@ class Node:
             for i, x in enumerate(final):
                 self.idx[x] = i + len(self.transactions)
                 if self.hg[x].d:
-                    self.data_confirmed.append(eval(self.hg[x].d)[1:])
                     txs = eval(self.hg[x].d)
                     for t in txs:
                         if t:
-                            self.smart_contract(t[1])
-
+                            #t:  # [4,           0.375000,     48]~
+                            self.extract_confirmed_votes(t[0], t[1])
             self.transactions += final
-        # if self.consensus:
-            # print(self.consensus)
-        lenth_transactions_confirmed = len(self.transactions)
-        # print(lenth_transactions_confirmed)
-        lenth_hg = len(self.hg)
-        # print(len(self.hg))
+        if new_c:
+            if byzantine:
+                self.byzantine_robot = []
+                self.byzantine_filter()
+            self.count = 0
+            self.m2 = 0
+            self.mean = 0
+            self.se = 10
+            for vote in self.confirmed_votes:
+                if vote[0] not in self.byzantine_robot:
+                    if self.se > self.threshold:
+                        self.calculate_mean(vote[1])
+                    else:
+                        self.consensusReached = True
+                        break
+        if self.consensus:
+            print("self.consensus:%s" % str(self.consensus))
+            print("new_c: %s" % str(new_c))
         self.time = time() - start
-        # if self.id == 9:
-        #     logger.info("%.6f\t%d\t%d\t%d" % (self.time,lenth_transactions_confirmed,lenth_hg,ev_count))
 
-    def smart_contract(self,x):
-        if x and x!=-2:
-            self.y.append(x)
-            self.count = self.count + 1
-            print("robot %2d, confirmed votes count=%d" % (self.id, self.count))
-            delta = x - self.mean
-            self.mean = self.mean + delta / self.count
-            delta2 = x - self.mean
-            self.m2 = self.m2 + delta *delta2
-            if self.count > 2:
-                sd = math.sqrt(self.m2 / (self.count - 1))
-                std=np.std(self.y,ddof=1)
-                se2=std / math.sqrt(self.count)
-                self.se = sd / math.sqrt(self.count)
-                print("robot %2d, sd=%f, std=%f, se=%f, se2=%f, mean=%f, consensus=%s " % (self.id, sd, std, self.se, se2, self.mean, self.se < self.threshold))
-            if self.se < self.threshold:
-                print("robot %2d allconfirmedvotes: %s" % (self.id, str(self.y)))
+    # def get_key(self, dct, value):
+    #     return [k for (k,v) in dct.items() if v == value]
 
+    def extract_confirmed_votes(self, robot_id, x):
+        if x!='' and x!=-2:
+            self.confirmed_votes.append((robot_id, x))
+            self.votes_of_robot[robot_id].append(x)
         elif x == -2:
             self.stop = True
-            #self.allconsensusReached = True
         else:
             print("robot %2d got unknown data: %s" % (self.id, str(x)))
+
+    def byzantine_filter(self):
+            ready_to_detect = True
+            #Only when the number of votes for each robot reaches 4, Byzantine detection can be carried out
+            for i in self.votes_of_robot.keys():
+                if len(self.votes_of_robot[i]) < 4:
+                    ready_to_detect = False
+            #detect byzantine robot
+            byzantine_robot = byzantineFilter(self.votes_of_robot, ready_to_detect)
+            print("byzantine_list: %s"%str(byzantine_robot))
+            self.byzantine_robot = byzantine_robot[:]
+
+    def calculate_mean(self, x):
+        self.count = self.count + 1
+        delta = x - self.mean
+        self.mean = self.mean + delta / self.count
+        delta2 = x - self.mean
+        self.m2 = self.m2 + delta * delta2
+        if self.count > 2:
+            sd = math.sqrt(self.m2 / (self.count - 1))
+            self.se = sd / math.sqrt(self.count)
 
     def main(self):
         """Main working loop."""
@@ -404,7 +420,7 @@ class Node:
         while True:
             yield new
             payload = agent.getData()
-            print("robot=%2d, se=%f, mean=%f, consensusRound=%s, consensusReached=%s, hg_height=%d" % (self.id, self.se, self.mean, str(self.consensus), str(self.se < self.threshold), len(self.hg)))
+            print("robot=%2d, se=%f, mean=%f, consensusRound=%s, consensusReached=%s, hg_height=%d, byzantine_robots=%s" % (self.id, self.se, self.mean, str(self.consensus), str(self.se < self.threshold), len(self.hg), self.byzantine_robot))
             if payload:
 
                 neighbor_pks = [list(self.network.keys())[i] for i in range(self.n) if payload[0][i] == 1]
@@ -488,11 +504,11 @@ class Agent:
             print("socket connection exception: %s" % str(e))
         print("robot %2d, address: %s" % (self.id, str(self.client_addr)))
         self.last_data = 0
-        self.votes =[]
         
     def getData(self):
         try:
             data = self.connect_socket.recv(192).decode()
+            #vote:  #[[1, 0, 0, 0, 0, 0],  4,           0.375000,     48]~
             print("robot %2d vote: %s lenth=%d" % (self.id, data, len(data)))
             if len(data) > 0:
                 data = data.split('#')[1]
@@ -506,8 +522,6 @@ class Agent:
                     	    data[2] = ''
                     else:
                         self.last_data = data[3]
-                        self.votes.append(data[2])
-                # print("robot %2d votes=%s" % (self.id, str(self.votes)))
             else: 
                 data = ''
         except Exception as e:
