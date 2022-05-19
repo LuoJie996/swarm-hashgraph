@@ -1,0 +1,31 @@
+<launch>
+
+    <arg name="epuck2_id" default="0"/>
+    <arg name="epuck2_address" default="192.168.1.1"/>
+    <arg name="epuck2_name" default="epuck2_robot_0"/>
+    <arg name="is_single_robot" default="1" />
+    <arg name="xpos" default="0.0"/>
+    <arg name="ypos" default="0.0"/>
+    <arg name="theta" default="0.0"/>
+    <arg name="cam_en" default="false"/> <!-- When the camera is enabled you'll experience lower refresh rate -->
+    <arg name="floor_en" default="false"/>  
+    <!-- <arg name="ros_rate" default="20" /> --> <!-- This feature is disable since causes connection stability problems. -->
+    
+    <node pkg="epuck_driver_cpp" type="epuck_driver_cpp" name="$(arg epuck2_name)" output="screen">
+        <param name="epuck2_id" value="$(arg epuck2_id)"/>
+        <param name="epuck2_address" value="$(arg epuck2_address)"/>
+        <param name="epuck2_name" value="$(arg epuck2_name)"/>
+        <param name="xpos" value="$(arg xpos)"/>
+		<param name="ypos" value="$(arg ypos)"/>
+		<param name="theta" value="$(arg theta)"/> 
+        <param name="camera" value="$(arg cam_en)"/>
+        <param name="floor" value="$(arg floor_en)"/>
+        <!--<param name="ros_rate" value="$(arg ros_rate)"/> -->
+        <remap from="/ps0to7" to="ps0to7"/>
+    </node>
+    
+    <param name="robot_description" textfile="$(find epuck_driver_cpp)/urdf/epuck_urdf.xml"/>
+    <node name="epuck_state_publisher$(arg epuck2_id)" pkg="robot_state_publisher" type="state_publisher">
+        <param name="tf_prefix" value="$(arg epuck2_name)" />
+    </node>
+</launch>

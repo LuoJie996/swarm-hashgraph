@@ -1,0 +1,40 @@
+#Host:
+	roscore
+	cd ~/swarm-hashgraph/black-white-ratio-estimate/controllers/py-swirld-black-ratio
+	conda activate recognize
+	python swirld_black_white_ratio_estimate.py
+	cd ~/Documents/detectmarker/
+	conda activate recognize
+	python marker_recognize.py
+
+	#launch docker containers:
+	cd ~/Documents/swarmrobots/scripts/
+	./docker-run.sh #only at first time
+	./docker-start.sh
+	./docker-exec.sh
+
+#Robot:
+	#turn on the button of the epuck
+	#connect the robot wifi to the router the same as the Host
+
+#Docker container:
+	#In each container,execute the following commands:
+	name=`hostname`;id=${name: -1};ROS_NAMESPACE=$name rosrun epuck_driver_cpp roslaunch.sh $id [IP]$id $name
+	#Replace [IP] with the IP of your robot
+
+	#Let the epuck move:
+	name=`hostname`;id=${name: -1};ROS_NAMESPACE=$name rosrun epuck_driver_cpp epuck_avoid.py
+
+
+	#Let the epuck stop:
+	name=`hostname`;id=${name: -1};ROS_NAMESPACE=$name rosrun epuck_driver_cpp stop.py 
+
+
+	#Let the epuck make estimation and send the estiamtes to the Hashgraph
+	name=`hostname`;id=${name: -1};ROS_NAMESPACE=$name rosrun epuck_driver_cpp daps.py $id
+
+
+
+
+
+

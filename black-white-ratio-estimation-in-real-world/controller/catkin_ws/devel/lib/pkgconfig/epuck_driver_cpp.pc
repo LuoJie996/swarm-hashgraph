@@ -1,0 +1,8 @@
+prefix=/root/catkin_ws/devel
+
+Name: epuck_driver_cpp
+Description: Description of epuck_driver_cpp
+Version: 0.0.0
+Cflags: 
+Libs: -L/root/catkin_ws/devel/lib 
+Requires: 
