@@ -19,3 +19,5 @@ Take object-searching for example
 4. Click the run button
 ## Tips
 Don't forget to change the absolute path of the document in the code to read your preset parameters and save your experimental results.
+## Demo Video
+https://pan.baidu.com/s/1mtrY0Fwr6RJt6HVxyEfKdA?pwd=s6s5#list/path=%2F
