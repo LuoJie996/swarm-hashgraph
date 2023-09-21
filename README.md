@@ -1,6 +1,7 @@
 # swarm-hashgraph
 This repository is an implementation of the framework for hashgraph-based swarm robotics.
-There are two case studies in this repository, one is black-white ratio estimation and the other is object searching
+There are two case studies in this repository, one is black-white ratio estimation and the other is object searching.
+The corresponding article: A Fast and Robust Solution for Common Knowledge Formation in Decentralized Swarm Robots.https://link.springer.com/article/10.1007/s10846-022-01759-1
 ## Requirements
 Ubuntu18.04, Webots 2021a
 
